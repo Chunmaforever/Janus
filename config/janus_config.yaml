@@ -1,0 +1,17 @@
+# Janus Project Configuration
+
+target:
+  patent_id: "US12345678"  # Replace with actual target patent
+  priority_date: "2021-01-01"  # Replace with actual priority date
+
+search:
+  max_refs: 50
+  source: "mock" # "mock" or "google_patents" (requires API)
+
+weights:
+  core_element: 5.0
+  common_element: 1.0
+
+llm:
+  model: "claude-3-5-sonnet-20241022"
+  temperature: 0.0
