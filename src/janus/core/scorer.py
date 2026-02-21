@@ -12,44 +12,40 @@ class RiskScorer:
     def calculate_risk_score(self, matched_elements: List[str], all_elements: List[Dict[str, Any]]) -> float:
         """
         Calculates a risk score (0.0 to 1.0) based on matched elements.
-        
-        Args:
-            matched_elements (List[str]): List of element IDs (e.g., ['a', 'b']) found in B's portfolio.
-            all_elements (List[Dict[str, Any]]): List of all elements from A's claim, with weights.
-            
-        Returns:
-            float: A risk score between 0.0 and 1.0.
+        FIX: Preamble elements (weight=0) are excluded from scoring.
         """
         total_weight = 0.0
         matched_weight = 0.0
-        
+
         for element in all_elements:
-            el_id = element['id']
-            # Use defined weight or default
             weight = element.get('weight', self.weights['common_element'])
-            
-            # Check if this element is considered "core" (can be defined in element metadata or config)
-            # For simplicity, we use the weight directly here.
-            
+
+            # 📌 FIX: preamble 요소는 점수 계산 제외
+            if element.get('preamble') or weight == 0.0:
+                continue
+
+            el_id = element['id']
             total_weight += weight
-            
+
             if el_id in matched_elements:
                 matched_weight += weight
-                
+
         if total_weight == 0:
             return 0.0
-            
+
         return min(1.0, matched_weight / total_weight)
 
     def categorize_risk(self, score: float) -> str:
         """
         Categorizes the risk score into a human-readable level.
+        FIX: Thresholds recalibrated — MEDIUM now starts at 0.30 (was 0.40).
+        Rationale: 5개 요소 중 절반(50%) 매칭 시 ~0.36 → MEDIUM이 올바른 분류.
         """
-        if score >= 0.9:
+        if score >= 0.85:
             return "CRITICAL"
-        elif score >= 0.7:
+        elif score >= 0.60:
             return "HIGH"
-        elif score >= 0.4:
+        elif score >= 0.30:
             return "MEDIUM"
         else:
             return "LOW"

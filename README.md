@@ -9,33 +9,41 @@ It operates in two modes, inspired by the two-faced god Janus:
 
 ## Directory Structure
 
-- `src/janus/core/`: The brain. Contains the `PuzzleMatcher`, `ClaimDecomposer`, and `RiskScorer`.
+- `src/janus/core/`: The brain. Contains `PuzzleMatcher`, `ClaimDecomposer`, `RiskScorer`, and `AIIntelligence`.
 - `src/janus/faces/`: The modes. `forward.py` (Infringement) and `backward.py` (Validity).
-- `src/janus/agents/`: The workers. `searcher.py` (Patent Retrieval) and `drafter.py` (Claim Writing).
-- `config/`: Configuration files.
+- `src/janus/agents/`: The workers. `searcher.py` (Global Retrieval) and `drafter.py` (Claim Writing).
+- `src/janus/reporters/`: The storytellers. `report_generator.py` and premium HTML templates.
+
+## ✨ Key Features
+
+- **Semantic Puzzle Matcher**: TF-IDF based matching of claim elements across competitor portfolios.
+- **Global Search Engine**: Direct integration with PatentsView (US) and EPO OPS (90+ countries including KR, JP).
+- **AI Expert Reasoning**: Internal (No-API) reasoning agent that provides professional attorney-like opinions and strategies.
+- **Premium Dashboard**: Glassmorphism-styled interactive HTML reports for visual risk assessment.
 
 ## Usage
 
 ### 1. Setup
 
-Install requirements (TBD) and configure `config/janus_config.yaml`.
-
-### 2. Forward Mode (Infringement Search)
-
-Find if "Competitor X" is using your technology.
+Install requirements and configure `config/janus_config.yaml`.
 
 ```bash
-python main.py --mode forward --competitor "Competitor X"
+export JANUS_API_KEY="your_api_key_optional"
 ```
 
-### 3. Backward Mode (Validity & Correction)
-
-Check if your patent is safe from "Competitor Y's" prior art, and get correction suggestions if not.
+### 2. Run Analysis
 
 ```bash
-python main.py --mode backward --competitor "Competitor Y" --target_claim "A widget comprising a, b, and c."
+python main.py --mode forward --assignee "CompetitorName" --claim "target_claim_text"
 ```
 
-## Core Logic: The Puzzle Matcher
+## Verification
 
-Unlike simple keyword search, Janus breaks down a claim into elements (puzzle pieces) and looks for them across a competitor's entire portfolio. It can identify if a competitor has all the pieces distributed across multiple patents, signaling a high risk of combined infringement or invalidity.
+All core components are verified via:
+
+- `tests/test_global_search.py`
+- `tests/test_ai_intelligence.py`
+- `tests/test_dashboard.py`
+
+---
+*Powered by Janus AI - See Both Sides of the Patent.*

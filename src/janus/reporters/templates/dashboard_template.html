@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Janus Patent Analysis Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --glass-bg: rgba(15, 23, 42, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-primary: #38bdf8;
+            --accent-secondary: #818cf8;
+            --risk-low: #10b981;
+            --risk-med: #f59e0b;
+            --risk-high: #ef4444;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 40px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .meta-info {
+            text-align: right;
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--glass-bg);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 32px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-target {
+            margin-bottom: 24px;
+        }
+
+        .target-title {
+            margin-bottom: 12px;
+            font-size: 14px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .target-text {
+            font-size: 18px;
+            line-height: 1.6;
+            font-weight: 300;
+        }
+
+        /* Risk Gauge */
+        .risk-gauge-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .gauge-wrap {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin-bottom: 24px;
+        }
+
+        .gauge-svg {
+            transform: rotate(-90deg);
+        }
+
+        .gauge-bg {
+            fill: none;
+            stroke: var(--glass-border);
+            stroke-width: 12;
+        }
+
+        .gauge-progress {
+            fill: none;
+            stroke: var(--risk-high);
+            stroke-width: 12;
+            stroke-linecap: round;
+            stroke-dasharray: 565;
+            stroke-dashoffset: 565;
+            transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .gauge-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 42px;
+            font-weight: 700;
+        }
+
+        .risk-label {
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Puzzle Grid */
+        .puzzle-title {
+            margin-bottom: 24px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .puzzle-piece {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed var(--glass-border);
+            border-radius: 16px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .puzzle-piece.found {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.1), rgba(129, 140, 248, 0.1));
+            border: 1px solid var(--accent-primary);
+        }
+
+        .puzzle-piece.found::after {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            color: var(--accent-primary);
+            font-weight: 700;
+        }
+
+        .piece-id {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .piece-text {
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        /* AI Opinion */
+        .opinion-section {
+            grid-column: span 2;
+            margin-top: 24px;
+        }
+
+        .opinion-content {
+            white-space: pre-line;
+            line-height: 1.8;
+            font-size: 16px;
+            color: #cbd5e1;
+            padding: 20px;
+            border-left: 4px solid var(--accent-primary);
+            background: rgba(56, 189, 248, 0.05);
+            border-radius: 0 16px 16px 0;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .footer {
+            margin-top: 60px;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 13px;
+        }
+
+        /* Detail Popup */
+        #detail-view {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            width: 400px;
+            background: #1e293b;
+            border: 1px solid var(--accent-primary);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 100;
+            animation: slideInUp 0.4s ease;
+        }
+
+        #detail-id {
+            color: var(--accent-primary);
+            margin-bottom: 8px;
+        }
+
+        #detail-text {
+            font-size: 14px;
+            margin-bottom: 16px;
+            color: var(--text-dim);
+        }
+
+        #detail-match {
+            border-top: 1px solid var(--glass-border);
+            padding-top: 16px;
+        }
+
+        .match-header {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+
+        .match-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .close-btn {
+            margin-top: 20px;
+            background: none;
+            border: 1px solid var(--glass-border);
+            color: var(--text-dim);
+            padding: 5px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        @keyframes slideInUp {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">JANUS PATENT ANALYTICS</div>
+            <div class="meta-info">
+                <div>Report ID: #{{REPORT_ID}}</div>
+                <div>Date: {{DATE}}</div>
+            </div>
+        </header>
+
+        <section class="card card-target">
+            <h3 class="target-title">Target Claim Scope</h3>
+            <p class="target-text">{{TARGET_CLAIM}}</p>
+        </section>
+
+        <div class="dashboard-grid">
+            <!-- Left: Risk Overview -->
+            <div class="card risk-gauge-container">
+                <h3 class="puzzle-title">Overall Risk Assessment</h3>
+                <div class="gauge-wrap">
+                    <svg class="gauge-svg" width="200" height="200">
+                        <circle class="gauge-bg" cx="100" cy="100" r="90"></circle>
+                        <circle id="risk-progress" class="gauge-progress" cx="100" cy="100" r="90"></circle>
+                    </svg>
+                    <div id="risk-value" class="gauge-text">0%</div>
+                </div>
+                <div id="risk-label" class="risk-label">Low Risk</div>
+            </div>
+
+            <!-- Right: Puzzle Matrix -->
+            <div class="card">
+                <h3 class="puzzle-title">Claim Element Reconstruction (Puzzle)</h3>
+                <div id="puzzle-matrix" class="puzzle-grid">
+                    <!-- Dynamic Pieces -->
+                </div>
+            </div>
+
+            <!-- AI Opinion Section -->
+            <div class="card opinion-section">
+                <h3 class="puzzle-title">🎯 Agent Expert Opinion</h3>
+                <div class="opinion-content">
+                    {{AI_OPINION}}
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            &copy; 2026 Janus Project - Generated by Advanced Coding Subagent
+        </footer>
+    </div>
+
+    <!-- Detail Popup -->
+    <div id="detail-view">
+        <h4 id="detail-id">Element</h4>
+        <p id="detail-text"></p>
+        <div id="detail-match">
+            <div class="match-header">Top Matches</div>
+            <div id="match-patents"></div>
+        </div>
+        <button onclick="closeDetail()" class="close-btn">Close</button>
+    </div>
+
+    <script id="dashboard-data" type="application/json">{{DATA_JSON}}</script>
+    <script>
+        function init() {
+            const dataElement = document.getElementById('dashboard-data');
+            const data = JSON.parse(dataElement.textContent);
+
+            // Update Gauge
+            const score = data.risk_score;
+            const progress = document.getElementById('risk-progress');
+            const valueDisplay = document.getElementById('risk-value');
+            const label = document.getElementById('risk-label');
+
+            const offset = 565 - (565 * score);
+            progress.style.strokeDashoffset = offset;
+            valueDisplay.innerText = Math.round(score * 100) + '%';
+
+            if (score > 0.7) {
+                progress.style.stroke = 'var(--risk-high)';
+                label.innerText = 'Critical Risk';
+                label.style.color = 'var(--risk-high)';
+            } else if (score > 0.3) {
+                progress.style.stroke = 'var(--risk-med)';
+                label.innerText = 'Medium Risk';
+                label.style.color = 'var(--risk-med)';
+            } else {
+                progress.style.stroke = 'var(--risk-low)';
+                label.innerText = 'Low Risk';
+                label.style.color = 'var(--risk-low)';
+            }
+
+            // Populate Puzzle
+            const matrix = document.getElementById('puzzle-matrix');
+            data.elements.forEach(el => {
+                const isFound = data.matches[el.id] && data.matches[el.id].length > 0;
+                const piece = document.createElement('div');
+                piece.className = `puzzle-piece ${isFound ? 'found' : ''}`;
+                piece.innerHTML = `
+                    <div class="piece-id">${el.id} [w:${el.weight}]</div>
+                    <div class="piece-text">${el.text.substring(0, 60)}...</div>
+                `;
+                piece.onclick = () => showDetail(el, data);
+                matrix.appendChild(piece);
+            });
+        }
+
+        function showDetail(el, data) {
+            const detailView = document.getElementById('detail-view');
+            document.getElementById('detail-id').innerText = `Element ${el.id}`;
+            document.getElementById('detail-text').innerText = el.text;
+
+            const matchContainer = document.getElementById('match-patents');
+            matchContainer.innerHTML = '';
+
+            const patents = data.matches[el.id] || [];
+            if (patents.length === 0) {
+                matchContainer.innerHTML = '<div style="color: var(--risk-high)">No matches found in references.</div>';
+            } else {
+                patents.forEach(pId => {
+                    const score = data.match_details[`${el.id}:${pId}`] || 0;
+                    const item = document.createElement('div');
+                    item.className = 'match-row';
+                    item.innerHTML = `<span>${pId}</span> <span style="color: var(--accent-primary)">${Math.round(score * 100)}%</span>`;
+                    matchContainer.appendChild(item);
+                });
+            }
+
+            detailView.style.display = 'block';
+        }
+
+        function closeDetail() {
+            document.getElementById('detail-view').style.display = 'none';
+        }
+
+        window.onload = init;
+    </script>
+</body>
+
+</html>

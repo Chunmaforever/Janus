@@ -1,71 +1,70 @@
-from typing import List, Dict, Any, Tuple
-from .parser import ClaimDecomposer
-from .scorer import RiskScorer
+from janus.core.similarity import TFIDFSimilarity
+from janus.core.intelligence import AIIntelligence
 
 class PuzzleMatcher:
     """
-    The core engine that matches disjoint patent elements from B to A's claim puzzle.
+    Core engine that coordinates decomposition, matching, and scoring.
     """
     
-    def __init__(self, decomposer: ClaimDecomposer, scorer: RiskScorer, llm_client=None):
+    def __init__(self, decomposer, scorer):
         self.decomposer = decomposer
         self.scorer = scorer
-        self.llm_client = llm_client
+        self.similarity_engine = TFIDFSimilarity()
+        self.intelligence = AIIntelligence()
+        self.similarity_threshold = 0.25 # Optimized threshold
         
-    def match_elements(self, target_elements: List[Dict[str, Any]], reference_patents: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def match_elements(self, target_elements: List[Dict[str, Any]], reference_patents: List[Dict[str, Any]], target_claim: str = "") -> Dict[str, Any]:
         """
         Scans reference patents to find matches for each target element.
-        
-        Args:
-            target_elements: Decomposed elements of A's claim.
-            reference_patents: List of B's patents (dict with 'id', 'text', 'date', etc.).
-            
-        Returns:
-            Dict: Analysis result containing matches, missing elements, and risk score.
+        FIX: Preamble elements are skipped from matching loop.
         """
-        matches = {} # element_id -> List[patent_id]
-        
-        # 1. Scanning Pass (Simulated)
-        # in real implementation, this would use embeddings or LLM to semantic match
+        if not target_elements:
+            return {
+                "matches": {},
+                "match_details": {},
+                "found_elements": [],
+                "missing_elements": [],
+                "risk_score": 0.0,
+                "risk_level": "LOW",
+                "ai_opinion": ""
+            }
+            
+        matches = {}  # element_id -> List[patent_id]
+        match_scores = {} # (element_id, patent_id) -> float
+
         for element in target_elements:
+            # 📌 FIX: preamble 요소는 매칭 대상에서 제외
+            if element.get('preamble'):
+                continue
+
             el_id = element['id']
             el_text = element['text']
-            
             matches[el_id] = []
-            
+
             for patent in reference_patents:
-                # Placeholder for semantic search: simple keyword matching for now
-                if self._basic_text_match(el_text, patent['text']):
+                score = self.similarity_engine.score(el_text, patent['text'])
+                if score >= self.similarity_threshold:
                     matches[el_id].append(patent['id'])
-                    
-        # 2. Risk Calculation
+                    match_scores[(el_id, patent['id'])] = score
+
+        # Risk Calculation (preamble 제외 요소만 사용)
         found_element_ids = [eid for eid, pids in matches.items() if pids]
         risk_score = self.scorer.calculate_risk_score(found_element_ids, target_elements)
         risk_level = self.scorer.categorize_risk(risk_score)
-        
-        return {
+
+        result = {
             "matches": matches,
+            "match_details": {f"{k[0]}:{k[1]}": v for k, v in match_scores.items()},
             "found_elements": found_element_ids,
-            "missing_elements": [e['id'] for e in target_elements if e['id'] not in found_element_ids],
+            "missing_elements": [
+                e['id'] for e in target_elements
+                if not e.get('preamble') and e['id'] not in found_element_ids
+            ],
             "risk_score": risk_score,
             "risk_level": risk_level
         }
-
-    def _basic_text_match(self, element_text: str, document_text: str) -> bool:
-        """
-        Simple containment check. Replace with Vector DB or LLM evaluator.
-        """
-        # A very naive check - split element into significant words
-        # and check if a threshold of them appear in doc.
-        # This is just for skeleton purposes.
-        keywords = [w for w in element_text.split() if len(w) > 3]
-        if not keywords:
-            return False
-            
-        hits = 0
-        for kw in keywords:
-            if kw.lower() in document_text.lower():
-                hits += 1
-                
-        # If > 50% of significant words match, consider it a hit (Simulated)
-        return (hits / len(keywords)) > 0.5
+        
+        # Add AI Reasoning
+        result["ai_opinion"] = self.intelligence.analyze_match_results(result, target_claim, target_elements)
+        
+        return result
